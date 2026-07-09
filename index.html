@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Vocabulary Quiz</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(145deg, #0a0e1a 0%, #1a1f35 50%, #0d1117 100%);
+    min-height: 100vh;
+    color: #e8eaf6;
+  }
+  .container {
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 24px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 40px 32px;
+    width: 100%;
+    backdrop-filter: blur(20px);
+  }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; text-align: center; }
+  .subtitle { color: #7986cb; font-size: 13px; text-align: center; margin-top: 8px; }
+  .emoji-big { font-size: 42px; text-align: center; margin-bottom: 8px; }
+  .label { color: #9fa8da; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+
+  /* Slide toggle (모드 선택) */
+  .seg {
+    position: relative; display: flex;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 4px;
+    margin-bottom: 20px;
+    user-select: none;
+  }
+  .seg-indicator {
+    position: absolute; top: 4px; left: 4px;
+    width: calc(50% - 4px); height: calc(100% - 8px);
+    border-radius: 9px;
+    background: linear-gradient(135deg, #5c6bc0, #3949ab);
+    box-shadow: 0 2px 12px rgba(92,107,192,0.35);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .seg.pos-1 .seg-indicator { transform: translateX(100%); }
+  .seg-btn {
+    flex: 1; position: relative; z-index: 1;
+    padding: 11px 0; border: none; background: transparent;
+    color: #616a8a; font-size: 14px; font-weight: 600;
+    cursor: pointer; text-align: center;
+    transition: color 0.25s;
+  }
+  .seg-btn.active { color: #fff; }
+
+  /* Mode toggle (출제 방향 등) */
+  .mode-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .mode-btn {
+    flex: 1; padding: 12px 0; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    color: #616a8a; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .mode-btn.active {
+    border: 2px solid #5c6bc0;
+    background: rgba(92,107,192,0.15);
+    color: #9fa8da;
+  }
+
+  /* Topic buttons */
+  .topic-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .topic-btn {
+    width: 100%; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: #9fa8da; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; text-align: left;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .topic-btn:hover { background: rgba(92,107,192,0.08); border-color: rgba(92,107,192,0.3); }
+  .topic-btn.active {
+    border: 2px solid #5c6bc0;
+    background: rgba(92,107,192,0.15);
+    color: #e8eaf6;
+  }
+  .topic-btn .count { color: #5c6bc0; font-size: 12px; }
+
+  /* Count buttons — 2행 3열 그리드 */
+  .count-row {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-bottom: 24px;
+  }
+  .count-btn {
+    padding: 11px 0; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    color: #616a8a; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .count-btn.active {
+    border: 2px solid #5c6bc0;
+    background: rgba(92,107,192,0.15);
+    color: #9fa8da;
+  }
+  .count-btn.disabled {
+    opacity: 0.25; pointer-events: none;
+  }
+
+  .start-btn {
+    width: 100%; padding: 14px 0; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #5c6bc0, #3949ab);
+    color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(92,107,192,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .start-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(92,107,192,0.4); }
+  .start-btn.disabled { opacity: 0.35; pointer-events: none; }
+
+  /* Progress */
+  .progress-bar-bg { width: 100%; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.06); }
+  .progress-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #5c6bc0, #7986cb); transition: width 0.4s ease; }
+  .progress-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+  .progress-row .qnum { color: #7986cb; }
+  .progress-row .score { color: #66bb6a; }
+  .topic-tag { color: #5c6bc0; font-size: 11px; font-weight: 600; margin-top: 4px; }
+
+  /* Definition card */
+  .card-quiz { padding: 28px 24px; border-radius: 16px; margin-bottom: 20px; }
+  .def-label { color: #5c6bc0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+  .def-text { color: #e8eaf6; font-size: 20px; line-height: 1.65; font-weight: 500; }
+
+  /* Options */
+  .options { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .opt-btn {
+    width: 100%; padding: 16px 20px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: #c5cae9; font-size: 16px; font-weight: 600;
+    text-align: left; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .opt-btn:hover:not(.locked) { background: rgba(92,107,192,0.08); border-color: rgba(92,107,192,0.3); }
+  .opt-btn.locked { cursor: default; }
+  .opt-btn.correct { background: rgba(76,175,80,0.12); border: 1.5px solid rgba(76,175,80,0.4); color: #66bb6a; }
+  .opt-btn.wrong { background: rgba(244,67,54,0.1); border: 1.5px solid rgba(244,67,54,0.35); color: #ef5350; }
+  .opt-btn.dimmed { color: #4a5070; }
+  .opt-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+    background: rgba(255,255,255,0.05); color: #7986cb;
+  }
+  .opt-btn.correct .opt-icon { background: rgba(76,175,80,0.2); color: #66bb6a; }
+  .opt-btn.wrong .opt-icon { background: rgba(244,67,54,0.2); color: #ef5350; }
+  .opt-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .opt-main { line-height: 1.4; }
+  .opt-sub {
+    font-size: 12.5px; font-weight: 500; line-height: 1.45;
+    color: #7986cb;
+  }
+  .opt-btn.correct .opt-sub { color: rgba(102,187,106,0.85); }
+  .opt-btn.wrong .opt-sub { color: rgba(239,83,80,0.8); }
+  .opt-btn.dimmed .opt-sub { color: #3d4360; }
+
+  .feedback { padding: 10px 20px; border-radius: 10px; margin-top: 16px; font-size: 15px; font-weight: 700; text-align: center; }
+  .feedback.ok { background: rgba(76,175,80,0.08); color: #66bb6a; }
+  .feedback.no { background: rgba(244,67,54,0.08); color: #ef5350; }
+  .next-btn {
+    margin-top: 12px; padding: 12px 48px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #5c6bc0, #3949ab);
+    color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(92,107,192,0.3);
+  }
+  .yarn-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 12px; padding: 12px 20px; border-radius: 10px;
+    border: 1px solid rgba(255,183,77,0.3);
+    background: rgba(255,183,77,0.08);
+    color: #ffb74d; font-size: 14px; font-weight: 700;
+    cursor: pointer; text-decoration: none;
+    transition: all 0.2s;
+  }
+  .yarn-btn:hover { background: rgba(255,183,77,0.15); border-color: rgba(255,183,77,0.5); }
+  .after-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* Result */
+  .score-box { display: inline-block; margin-top: 16px; padding: 12px 32px; border-radius: 14px; }
+  .score-box.good { background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.25); }
+  .score-box.mid { background: rgba(255,183,77,0.12); border: 1px solid rgba(255,183,77,0.25); }
+  .score-box.bad { background: rgba(244,67,54,0.12); border: 1px solid rgba(244,67,54,0.25); }
+  .score-num { font-size: 36px; font-weight: 800; }
+  .score-num.good { color: #66bb6a; }
+  .score-num.mid { color: #ffb74d; }
+  .score-num.bad { color: #ef5350; }
+  .score-pct { color: #7986cb; font-size: 16px; margin-left: 12px; }
+
+  .wrong-title { color: #ef5350; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .wrong-list { max-height: 320px; overflow-y: auto; padding-right: 4px; }
+  .wrong-item {
+    background: rgba(244,67,54,0.06); border: 1px solid rgba(244,67,54,0.12);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
+  }
+  .wrong-item .word { color: #e8eaf6; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .wrong-item .def { color: #9fa8da; font-size: 12px; line-height: 1.5; }
+  .wrong-item .ans { color: #ef5350; font-size: 11px; margin-top: 6px; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 24px; }
+  .btn-row button { flex: 1; padding: 12px 0; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-menu { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: #9fa8da; }
+  .btn-retry { border: none; background: linear-gradient(135deg, #5c6bc0, #3949ab); color: #fff; }
+  .btn-wrong-only { border: none; background: linear-gradient(135deg, #ef5350, #c62828); color: #fff; }
+
+  .section-divider { width: 100%; height: 1px; background: rgba(255,255,255,0.06); margin: 16px 0; }
+
+  /* Quiz navigation (이전 / 홈) */
+  .nav-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .nav-btn {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: #9fa8da; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .nav-btn:hover { background: rgba(92,107,192,0.1); border-color: rgba(92,107,192,0.35); }
+  .nav-btn.disabled { opacity: 0.25; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="container" id="app"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA — Everyday English (Ch1~10) + Business English (Unit1~4)
+// ─────────────────────────────────────────────
+const TOPICS = [
+  // ===== Everyday English =====
+  {
+    id: "ee_ch1", cat: "ee", label: "Ch1 음식·사물 상태", icon: "🍽️",
+    words: [
+      { word: "crumbs", def: "부스러기" },
+      { word: "lukewarm", def: "미지근한" },
+      { word: "bland", def: "밍밍한, 싱거운" },
+      { word: "rundown", def: "낡은, 허름한" },
+      { word: "blunt", def: "무딘 / 직설적인" },
+      { word: "chipped", def: "이가 나간, (칠이) 벗겨진" },
+    ]
+  },
+  {
+    id: "ee_ch2", cat: "ee", label: "Ch2 움직임·소리", icon: "🔔",
+    words: [
+      { word: "dangling", def: "대롱대롱 매달린" },
+      { word: "gnawing", def: "(갉아) 물어뜯는" },
+      { word: "jolting", def: "덜컹거리는 (버스 등)" },
+      { word: "rattling", def: "덜그럭거리는 (창문 등)" },
+      { word: "mopping", def: "대걸레로 닦는" },
+    ]
+  },
+  {
+    id: "ee_ch3", cat: "ee", label: "Ch3 감정·반응", icon: "😤",
+    words: [
+      { word: "That hurt.", def: "상처였어, 마음 아팠어" },
+      { word: "upset", def: "속상한" },
+      { word: "pissed", def: "열받은 (비격식)" },
+      { word: "hyped", def: "잔뜩 신난" },
+      { word: "beat", def: "녹초가 된" },
+      { word: "I can't believe this.", def: "이거 말도 안 돼" },
+      { word: "frustrating", def: "답답한, 짜증나는" },
+      { word: "embarrassing", def: "창피한, 민망한" },
+      { word: "annoying", def: "거슬리는, 성가신" },
+      { word: "weird", def: "이상한" },
+      { word: "It's not fair.", def: "불공평해" },
+    ]
+  },
+  {
+    id: "ee_ch4", cat: "ee", label: "Ch4 화장·외모 상태", icon: "💄",
+    words: [
+      { word: "chipped", def: "(네일이) 벗겨진, 깨진" },
+      { word: "smeared", def: "(립스틱이) 번진" },
+      { word: "smudged", def: "(마스카라가) 뭉개진, 번진" },
+      { word: "cakey", def: "(파운데이션이) 떡진" },
+      { word: "uneven", def: "고르지 않은, 삐뚤빼뚤한" },
+      { word: "overdone", def: "과하게 한" },
+      { word: "frizzy", def: "(머리가) 부스스한" },
+      { word: "roots showing", def: "염색 뿌리가 자라난" },
+      { word: "wrinkled", def: "(옷이) 구겨진" },
+    ]
+  },
+  {
+    id: "ee_ch5", cat: "ee", label: "Ch5 몸단장 동작", icon: "🪞",
+    words: [
+      { word: "putting on makeup", def: "화장을 하다" },
+      { word: "taking off makeup", def: "화장을 지우다" },
+      { word: "tying up my hair", def: "머리를 묶다" },
+      { word: "flossing my teeth", def: "치실질하다" },
+      { word: "spraying perfume", def: "향수를 뿌리다" },
+      { word: "shaving", def: "면도하다" },
+      { word: "filing my nails", def: "손톱을 다듬다" },
+      { word: "plucking my eyebrows", def: "눈썹을 뽑다" },
+    ]
+  },
+  {
+    id: "ee_ch6", cat: "ee", label: "Ch6 요리 동작", icon: "🍳",
+    words: [
+      { word: "grating", def: "(치즈를) 갈다" },
+      { word: "grinding", def: "(원두를) 갈다" },
+      { word: "rinsing", def: "헹구다" },
+      { word: "cracking", def: "(달걀을) 깨다" },
+      { word: "tossing", def: "(샐러드를) 버무리다" },
+      { word: "kneading", def: "(반죽을) 치대다" },
+    ]
+  },
+  {
+    id: "ee_ch7", cat: "ee", label: "Ch7 도로·거리", icon: "🚦",
+    words: [
+      { word: "drain", def: "배수구" },
+      { word: "traffic cone", def: "라바콘" },
+      { word: "rumble strips", def: "요철 노면 (졸음방지 홈)" },
+      { word: "roundabout", def: "회전교차로" },
+      { word: "manhole", def: "맨홀" },
+      { word: "crosswalk", def: "횡단보도" },
+      { word: "guardrail", def: "가드레일" },
+      { word: "road stud", def: "도로 반사못" },
+    ]
+  },
+  {
+    id: "ee_ch8", cat: "ee", label: "Ch8 열기·빼내기", icon: "🧴",
+    words: [
+      { word: "twist off", def: "비틀어 열다 (병뚜껑)" },
+      { word: "flip up", def: "위로 젖혀 올리다 (뚜껑)" },
+      { word: "crack open", def: "깨서/살짝 열다 (캔 등)" },
+      { word: "peel off", def: "벗겨내다 (스티커 등)" },
+      { word: "pop out", def: "톡 빼내다 (알약 등)" },
+      { word: "squeeze out", def: "짜내다 (튜브)" },
+    ]
+  },
+  {
+    id: "ee_ch9", cat: "ee", label: "Ch9 문 부품", icon: "🚪",
+    words: [
+      { word: "latch", def: "걸쇠, 래치" },
+      { word: "lever handle", def: "레버형 손잡이" },
+      { word: "door knob", def: "둥근 문손잡이" },
+      { word: "hinge", def: "경첩" },
+      { word: "peephole", def: "외시경, 도어스코프" },
+      { word: "door stopper", def: "문 받침, 도어스톱" },
+      { word: "door closer", def: "도어클로저 (자동 닫힘 장치)" },
+    ]
+  },
+  {
+    id: "ee_ch10", cat: "ee", label: "Ch10 몰래 보기·엿듣기", icon: "🕵️",
+    words: [
+      { word: "stalking", def: "스토킹 (따라다니며 감시)" },
+      { word: "eavesdropping", def: "(일부러) 엿듣기, 도청" },
+      { word: "overhearing", def: "(우연히) 엿듣게 됨" },
+      { word: "snooping", def: "기웃거리며 캐기" },
+      { word: "peeping", def: "훔쳐보기" },
+      { word: "spying", def: "염탐, 첩보" },
+    ]
+  },
+
+  // ===== Business English =====
+  {
+    id: "biz_u1", cat: "biz", label: "Unit1 감사·소개·추천", icon: "💌",
+    words: [
+      { word: "I am writing to thank you for ~", def: "~에 감사드리고자 편지 드립니다" },
+      { word: "hospitality", def: "환대" },
+      { word: "To show my greatest thanks to you", def: "깊은 감사를 표하고자" },
+      { word: "Taking this opportunity", def: "이 기회를 빌려" },
+      { word: "kind patronage", def: "후한 성원, 애용" },
+      { word: "Despite our long and valued relationship", def: "오랜 소중한 관계에도 불구하고" },
+      { word: "I appreciate ~", def: "~에 감사하다" },
+      { word: "thoughtfully", def: "사려 깊게" },
+      { word: "full support and cooperation", def: "전폭적 지원과 협조" },
+      { word: "Should your schedule change", def: "일정이 바뀌면 (= If your schedule changes)" },
+      { word: "in the interim", def: "그 사이에" },
+      { word: "with regard to ~", def: "~에 관하여" },
+      { word: "This is to introduce ~", def: "~을 소개합니다" },
+      { word: "a close friend and colleague", def: "오랜 친구이자 동료" },
+      { word: "if you don't mind", def: "괜찮으시다면" },
+      { word: "I am writing this line to let you know", def: "알려드리고자 씁니다" },
+      { word: "except for ~", def: "~을 제외하고" },
+      { word: "While in our employ", def: "재직 중에" },
+      { word: "more than satisfactory", def: "기대 이상으로 만족스러운" },
+      { word: "a high degree of competence", def: "높은 역량" },
+      { word: "This letter concerns ~", def: "이 편지는 ~에 관한 것입니다" },
+      { word: "I had the pleasure of working with ~", def: "~와 함께 일하는 기쁨을 누렸다" },
+      { word: "I would be happy to give a more complete explanation", def: "더 자세히 설명드리겠습니다" },
+    ]
+  },
+  {
+    id: "biz_u2", cat: "biz", label: "Unit2 문의·안내·회신", icon: "📨",
+    words: [
+      { word: "have significantly expanded", def: "크게 확장되었다" },
+      { word: "It was gratifying to hear from you", def: "소식 들어 기뻤습니다" },
+      { word: "things went reasonably well", def: "일이 그런대로 잘 되었다" },
+      { word: "I am looking forward to hearing from you", def: "회신 기다리겠습니다" },
+      { word: "We would welcome the opportunity to ~", def: "기꺼이 ~하겠습니다" },
+      { word: "Should you be interested in ~", def: "관심 있으시면 (= If you are interested)" },
+      { word: "do not hesitate to call in", def: "주저 말고 연락 주십시오" },
+      { word: "I look forward to some indication of your disposition", def: "귀하의 의향을 알려주시길 바랍니다" },
+      { word: "in this regard", def: "이와 관련하여" },
+      { word: "We will keep you informed of our progress", def: "진행 상황을 알려드리겠습니다" },
+      { word: "We will be in touch with you as soon as ~", def: "~하는 대로 연락드리겠습니다" },
+      { word: "permit us to take up this matter with you again", def: "이 문제를 다시 논의하도록 허락하다" },
+      { word: "Should our situation change", def: "상황이 바뀌면" },
+      { word: "As you know", def: "아시다시피" },
+      { word: "Your early response would be very much appreciated", def: "조속한 회신 부탁드립니다" },
+      { word: "have improved significantly", def: "크게 개선되었다" },
+      { word: "will be made within 60 days from payment", def: "결제 후 60일 이내에 이뤄집니다" },
+      { word: "Thank you for giving us this opportunity to ~", def: "~할 기회를 주셔서 감사합니다" },
+      { word: "to be of service", def: "도움이 되다" },
+      { word: "Due to the recent changes in policy", def: "최근 정책 변경으로 인해" },
+      { word: "we are afraid that ~", def: "유감스럽게도 ~" },
+      { word: "has been discontinued", def: "단종되었다" },
+      { word: "due to the increasing sophistication of user needs", def: "고도화되는 사용자 요구로 인해" },
+      { word: "Your letter has been passed on to them", def: "귀하의 서신을 그들에게 전달했습니다" },
+      { word: "if you wish to pursue ~", def: "~을 진행하고자 하시면" },
+      { word: "at a special price and with free delivery", def: "특가 및 무료 배송으로" },
+    ]
+  },
+  {
+    id: "biz_u3", cat: "biz", label: "Unit3 협상·불만·사과·환불", icon: "🤝",
+    words: [
+      { word: "Allow us to begin by thanking you for ~", def: "먼저 ~에 감사부터 드리겠습니다" },
+      { word: "We have reluctantly decided to ~", def: "부득이 ~하기로 했습니다" },
+      { word: "Every effort will be made to ~", def: "~하기 위해 모든 노력을 기울이겠습니다" },
+      { word: "minimize the damage", def: "피해를 최소화하다" },
+      { word: "A great deal of money was spent on ~", def: "~에 많은 돈이 들었다" },
+      { word: "unable to allocate more funds", def: "추가 자금을 배정할 수 없다" },
+      { word: "in the red", def: "적자 상태인" },
+      { word: "keep the current price until ~", def: "~까지 현재 가격을 유지하다" },
+      { word: "It will be appreciated if you reconsider ~", def: "재고해 주시면 감사하겠습니다" },
+      { word: "A quick reply would be very much appreciated", def: "신속한 회신 부탁드립니다" },
+      { word: "another approach you should promptly consider", def: "즉시 고려해야 할 또 다른 방안" },
+      { word: "We are willing to accept your request to ~", def: "기꺼이 ~ 요청을 받아들이겠습니다" },
+      { word: "defer your shipment", def: "선적을 연기하다" },
+      { word: "it was found that ~", def: "~임이 밝혀지다" },
+      { word: "We regret your dissatisfaction with ~", def: "~에 대한 불만족에 유감입니다" },
+      { word: "We have no alternative but to ~", def: "~할 수밖에 없습니다" },
+      { word: "the contracted amount", def: "계약 금액" },
+      { word: "in the best position to ~", def: "~하기에 가장 적합한 위치에 있는" },
+      { word: "To better satisfy you, we came up with ~", def: "더 만족시켜 드리고자 ~을 마련했습니다" },
+      { word: "We will not rest until you are completely satisfied", def: "완전히 만족하실 때까지 멈추지 않겠습니다" },
+      { word: "have it fixed as soon as possible", def: "최대한 빨리 고치다" },
+      { word: "In closing", def: "끝으로, 마무리하며" },
+      { word: "voice my appreciation for ~", def: "~에 대한 감사를 표하다" },
+      { word: "give us the chance to ~", def: "~할 기회를 주다" },
+      { word: "The refund you asked for", def: "요청하신 환불" },
+      { word: "Please accept our apology for any inconvenience this matter has caused you", def: "이 일로 끼친 불편에 사과드립니다" },
+      { word: "do our best to ~", def: "최선을 다해 ~하다" },
+      { word: "take the necessary actions", def: "필요한 조치를 취하다" },
+      { word: "hope you understand the circumstances", def: "사정을 이해해 주시길 바랍니다" },
+      { word: "broad areas of common interest", def: "폭넓은 공통 관심사" },
+      { word: "set a second meeting", def: "두 번째 회의를 잡다" },
+    ]
+  },
+  {
+    id: "biz_u4", cat: "biz", label: "Unit4 계약·서신·매뉴얼", icon: "📑",
+    words: [
+      { word: "be held for further consideration", def: "추가 검토를 위해 보관되다" },
+      { word: "based on various factors including ~", def: "~을 포함한 여러 요인에 근거하여" },
+      { word: "should you need further details", def: "더 자세한 사항이 필요하시면" },
+      { word: "We would appreciate it if you could ~", def: "~해 주시면 감사하겠습니다" },
+      { word: "confirm the verbal arrangements", def: "구두 합의를 확정하다" },
+      { word: "We look forward to a meaningful exchange of views", def: "의미 있는 의견 교환을 기대합니다" },
+      { word: "reluctantly have to reconsider", def: "부득이 재고할 수밖에 없다" },
+      { word: "due to size limitations", def: "크기 제한으로 인해" },
+      { word: "found hard to understand", def: "이해하기 어려웠다" },
+      { word: "Your expeditious reply made it possible for us to ~", def: "신속한 답변 덕분에 ~할 수 있었습니다" },
+      { word: "As I told you", def: "말씀드린 대로" },
+      { word: "as soon as I meet him", def: "그를 만나는 대로" },
+      { word: "have just returned from ~", def: "막 ~에서 돌아왔다" },
+      { word: "Thank you for the quick action in ~ing", def: "신속히 ~해 주셔서 감사합니다" },
+      { word: "As we have already advised you by letter", def: "서신으로 이미 알려드린 대로" },
+      { word: "Thank you for your interest in ~", def: "~에 관심 가져주셔서 감사합니다" },
+      { word: "provided free of charge", def: "무료로 제공되는" },
+      { word: "Enclosed is ~", def: "~을 동봉합니다" },
+      { word: "requested in your letter", def: "서신에서 요청하신" },
+      { word: "maintain a similar file", def: "유사한 파일을 보유하다" },
+      { word: "there is no ~ available at present", def: "현재 ~은 없습니다" },
+      { word: "Your request for ~ was received today", def: "~ 요청을 오늘 접수했습니다" },
+      { word: "a rough frame of reference", def: "대략적인 참고 기준" },
+      { word: "top-of-the-line", def: "최고급의, 최상위 (모델)" },
+      { word: "a copy of which you will find enclosed", def: "그 사본을 동봉했습니다" },
+      { word: "what caused the delay", def: "지연의 원인" },
+    ]
+  },
+];
+
+const ALL_WORDS = TOPICS.flatMap(t =>
+  t.words.map(w => ({ ...w, topic: t.label, topicId: t.id, cat: t.cat }))
+);
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let state = {
+  mode: "menu",
+  quizMode: "all",       // all | topic
+  direction: "forward",  // forward(뜻→영어) | reverse(영어→뜻) | mix
+  selectedTopic: null,
+  totalQ: 20,
+  questions: [],         // 각 문제에 answered(선택한 보기 index) 저장 → 이전 문제 이동 가능
+  currentQ: 0,
+  score: 0,
+  wrongList: [],
+};
+
+// ── 오답 보기 뽑기: 같은 챕터 위주 + 일부 다른 챕터 섞기 ──
+// 확률: 50% → 같은 챕터 2 + 다른 챕터 1
+//       30% → 같은 챕터 3
+//       20% → 같은 챕터 1 + 다른 챕터 2
+function pickDistractors(correct) {
+  const notSame = w => w.word !== correct.word && w.def !== correct.def;
+
+  const samePool  = shuffle(ALL_WORDS.filter(w => w.topicId === correct.topicId && notSame(w)));
+  // 다른 챕터는 같은 카테고리(ee↔ee, biz↔biz) 우선
+  const otherCat  = shuffle(ALL_WORDS.filter(w => w.topicId !== correct.topicId && w.cat === correct.cat && notSame(w)));
+  const otherAny  = shuffle(ALL_WORDS.filter(w => w.topicId !== correct.topicId && notSame(w)));
+
+  const r = Math.random();
+  let nSame = r < 0.5 ? 2 : (r < 0.8 ? 3 : 1);
+  nSame = Math.min(nSame, samePool.length);
+
+  const picks = [];
+  const usedWords = new Set([correct.word]);
+  const usedDefs  = new Set([correct.def]);
+
+  const tryAdd = (w) => {
+    if (picks.length >= 3) return;
+    if (usedWords.has(w.word) || usedDefs.has(w.def)) return;
+    picks.push(w);
+    usedWords.add(w.word);
+    usedDefs.add(w.def);
+  };
+
+  samePool.slice(0, nSame).forEach(tryAdd);
+  otherCat.forEach(tryAdd);
+  otherAny.forEach(tryAdd); // 그래도 모자라면 전체에서 보충
+
+  return picks.slice(0, 3);
+}
+
+function buildQuestions(wordPool, count, direction) {
+  const selected = shuffle(wordPool).slice(0, count);
+  return selected.map(correct => {
+    const others = pickDistractors(correct);
+    const dir = direction === "mix"
+      ? (Math.random() < 0.5 ? "forward" : "reverse")
+      : direction;
+    return { correct, options: shuffle([correct, ...others]), dir, answered: null };
+  });
+}
+
+function startQuiz() {
+  let pool, count;
+  if (state.quizMode === "all") {
+    pool = ALL_WORDS;
+    count = Math.min(state.totalQ, ALL_WORDS.length);
+  } else {
+    const topic = TOPICS.find(t => t.id === state.selectedTopic);
+    if (!topic) return;
+    pool = ALL_WORDS.filter(w => w.topicId === topic.id);
+    count = pool.length;
+  }
+  state.questions = buildQuestions(pool, count, state.direction);
+  state.currentQ = 0;
+  state.score = 0;
+  state.wrongList = [];
+  state.mode = "quiz";
+  render();
+}
+
+function selectOption(idx) {
+  const q = state.questions[state.currentQ];
+  if (q.answered !== null) return; // 이미 푼 문제는 재선택 불가
+  q.answered = idx;
+  const chosen = q.options[idx];
+  const isCorrect = chosen.word === q.correct.word && chosen.def === q.correct.def;
+  if (isCorrect) {
+    state.score++;
+  } else {
+    const yourAnswer = q.dir === "forward" ? chosen.word : chosen.def;
+    state.wrongList.push({ ...q.correct, yourAnswer });
+  }
+  render();
+}
+
+function nextQuestion() {
+  if (state.currentQ + 1 >= state.questions.length) {
+    state.mode = "result";
+  } else {
+    state.currentQ++;
+  }
+  render();
+}
+
+function prevQuestion() {
+  if (state.currentQ > 0) {
+    state.currentQ--;
+    render();
+  }
+}
+
+function goHome() {
+  state.mode = "menu";
+  render();
+}
+
+// ── getyarn.io 검색 URL 생성 ──
+// 비즈니스 표현의 ~, (= ...), (비격식) 같은 표기 제거 후 검색
+function yarnUrl(word) {
+  const cleaned = word
+    .replace(/\([^)]*\)/g, ' ')   // 괄호 내용 제거
+    .replace(/~ing/g, ' ')        // ~ing 제거
+    .replace(/[~…]/g, ' ')        // 물결표 제거
+    .replace(/\s+/g, ' ')         // 공백 정리
+    .trim()
+    .replace(/[.,]$/, '');        // 끝 문장부호 제거
+  return 'https://getyarn.io/yarn-find?text=' + encodeURIComponent(cleaned);
+}
+
+function render() {
+  const app = document.getElementById("app");
+  if (state.mode === "menu") renderMenu(app);
+  else if (state.mode === "quiz") renderQuiz(app);
+  else renderResult(app);
+}
+
+function renderMenu(app) {
+  const isAll = state.quizMode === "all";
+  const isTopic = state.quizMode === "topic";
+  const counts = [10, 20, 30, 40, 50, ALL_WORDS.length];
+  const canStart = isAll || (isTopic && state.selectedTopic);
+
+  const eeTopics  = TOPICS.filter(t => t.cat === "ee");
+  const bizTopics = TOPICS.filter(t => t.cat === "biz");
+
+  const topicBtn = t => `
+    <button class="topic-btn ${state.selectedTopic === t.id ? 'active' : ''}"
+      onclick="state.selectedTopic='${t.id}';render()">
+      <span>${t.icon} ${t.label}</span>
+      <span class="count">${t.words.length}개</span>
+    </button>`;
+
+  let topicHTML = "";
+  if (isTopic) {
+    topicHTML = `
+      <div class="label" style="margin-top:4px">📗 Everyday English</div>
+      <div class="topic-grid">${eeTopics.map(topicBtn).join('')}</div>
+      <div class="label" style="margin-top:8px">💼 Business English</div>
+      <div class="topic-grid">${bizTopics.map(topicBtn).join('')}</div>
+    `;
+  }
+
+  const dirs = [
+    { id: "forward", label: "뜻 → 영어" },
+    { id: "reverse", label: "영어 → 뜻" },
+    { id: "mix",     label: "혼합" },
+  ];
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="emoji-big">📝</div>
+      <h1>Vocabulary Quiz</h1>
+      <div class="subtitle">총 ${ALL_WORDS.length}개 · Everyday English + Business English</div>
+
+      <div style="margin-top:28px">
+        <div class="label">모드 선택</div>
+        <div class="seg ${isTopic ? 'pos-1' : ''}">
+          <div class="seg-indicator"></div>
+          <button class="seg-btn ${isAll ? 'active' : ''}"
+            onclick="state.quizMode='all';state.selectedTopic=null;render()">
+            전체
+          </button>
+          <button class="seg-btn ${isTopic ? 'active' : ''}"
+            onclick="state.quizMode='topic';render()">
+            챕터별
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">출제 방향</div>
+        <div class="mode-row">
+          ${dirs.map(d => `
+            <button class="mode-btn ${state.direction === d.id ? 'active' : ''}"
+              onclick="state.direction='${d.id}';render()">
+              ${d.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      ${topicHTML}
+
+      <div style="margin-top:${isTopic ? '8' : '0'}px">
+        <div class="label">문제 수</div>
+        <div class="count-row">
+          ${counts.map(n => `
+            <button class="count-btn ${state.totalQ === n ? 'active' : ''} ${isTopic ? 'disabled' : ''}"
+              onclick="state.totalQ=${n};render()">
+              ${n === ALL_WORDS.length ? 'ALL' : n}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <button class="start-btn ${canStart ? '' : 'disabled'}" onclick="startQuiz()">
+        ${isTopic && !state.selectedTopic ? '챕터를 선택하세요' : 'Start Quiz'}
+      </button>
+    </div>
+  `;
+}
+
+function renderQuiz(app) {
+  const q = state.questions[state.currentQ];
+  const letters = ['A', 'B', 'C', 'D'];
+  const isFwd = q.dir === "forward";
+  const chosen = q.answered !== null ? q.options[q.answered] : null;
+  const isCorrect = chosen && chosen.word === q.correct.word && chosen.def === q.correct.def;
+  const answeredCount = state.questions.filter(x => x.answered !== null).length;
+  const progress = (answeredCount / state.questions.length) * 100;
+
+  // 문제 카드: forward = 뜻 제시, reverse = 영어 제시
+  const promptLabel = isFwd ? "뜻 (Meaning)" : "영어 (English)";
+  const promptText  = isFwd ? q.correct.def : q.correct.word;
+
+  let optionsHTML = q.options.map((opt, i) => {
+    const isThis   = q.answered === i;
+    const isAnswer = opt.word === q.correct.word && opt.def === q.correct.def;
+    let cls = "opt-btn";
+    let icon = letters[i];
+    if (q.answered !== null) {
+      cls += " locked";
+      if (isAnswer)    { cls += " correct"; icon = "✓"; }
+      else if (isThis) { cls += " wrong";   icon = "✗"; }
+      else             { cls += " dimmed"; }
+    }
+    const mainText = isFwd ? opt.word : opt.def;
+    const subText  = isFwd ? opt.def  : opt.word;
+    // 선택(잠금) 후에만 모든 보기의 뜻/단어를 함께 표시
+    const subHTML = q.answered !== null
+      ? `<span class="opt-sub">${subText}</span>`
+      : '';
+    return `<button class="${cls}" onclick="selectOption(${i})">
+      <span class="opt-icon">${icon}</span>
+      <span class="opt-body">
+        <span class="opt-main">${mainText}</span>
+        ${subHTML}
+      </span>
+    </button>`;
+  }).join('');
+
+  let feedbackHTML = '';
+  if (q.answered !== null) {
+    const answerText = isFwd ? q.correct.word : q.correct.def;
+    feedbackHTML = `
+      <div class="feedback ${isCorrect ? 'ok' : 'no'}">
+        ${isCorrect ? 'Correct! 🎯' : `Wrong — Answer: ${answerText}`}
+      </div>
+      <div class="after-row">
+        <a class="yarn-btn" href="${yarnUrl(q.correct.word)}" target="_blank" rel="noopener">
+          🎬 영상으로 보기
+        </a>
+        <button class="next-btn" onclick="nextQuestion()">
+          ${state.currentQ + 1 >= state.questions.length ? 'See Results' : 'Next →'}
+        </button>
+      </div>
+    `;
+  }
+
+  app.innerHTML = `
+    <div style="width:100%">
+      <div class="nav-row">
+        <button class="nav-btn ${state.currentQ === 0 ? 'disabled' : ''}" onclick="prevQuestion()">← 이전 문제</button>
+        <button class="nav-btn" onclick="goHome()">🏠 홈</button>
+      </div>
+      <div class="progress-row">
+        <span class="qnum">Q${state.currentQ + 1} / ${state.questions.length}</span>
+        <span class="score">✓ ${state.score}</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" style="width:${progress}%"></div>
+      </div>
+      <div class="card card-quiz" style="margin-top:24px">
+        <div class="def-label">${promptLabel}</div>
+        <div class="def-text">${promptText}</div>
+        <div class="topic-tag">${q.correct.topic}</div>
+      </div>
+      <div class="options">${optionsHTML}</div>
+      ${feedbackHTML}
+    </div>
+  `;
+}
+
+function renderResult(app) {
+  const pct = Math.round((state.score / state.questions.length) * 100);
+  const emoji = pct === 100 ? '🎉' : pct >= 80 ? '👏' : pct >= 60 ? '👍' : '💪';
+  const grade = pct >= 80 ? 'good' : pct >= 60 ? 'mid' : 'bad';
+
+  let wrongHTML = '';
+  if (state.wrongList.length > 0) {
+    wrongHTML = `
+      <div style="margin-top:20px">
+        <div class="wrong-title">✗ 틀린 문제 — 복습</div>
+        <div class="wrong-list">
+          ${state.wrongList.map(item => `
+            <div class="wrong-item">
+              <div class="word">${item.word}</div>
+              <div class="def">${item.def}</div>
+              <div class="ans">내 답: ${item.yourAnswer}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  let wrongOnlyBtn = '';
+  if (state.wrongList.length > 0) {
+    wrongOnlyBtn = `<button class="btn-wrong-only" onclick="retryWrongOnly()">틀린 것만</button>`;
+  }
+
+  app.innerHTML = `
+    <div class="card" style="padding:40px 36px">
+      <div style="text-align:center">
+        <div style="font-size:52px;margin-bottom:8px">${emoji}</div>
+        <h1>결과</h1>
+        <div class="score-box ${grade}">
+          <span class="score-num ${grade}">${state.score}/${state.questions.length}</span>
+          <span class="score-pct">(${pct}%)</span>
+        </div>
+      </div>
+      ${wrongHTML}
+      <div class="btn-row">
+        <button class="btn-menu" onclick="state.mode='menu';render()">메뉴</button>
+        <button class="btn-retry" onclick="startQuiz()">다시 풀기</button>
+        ${wrongOnlyBtn}
+      </div>
+    </div>
+  `;
+}
+
+function retryWrongOnly() {
+  const keys = new Set(state.wrongList.map(w => w.word + '|' + w.def));
+  const pool = ALL_WORDS.filter(w => keys.has(w.word + '|' + w.def));
+  state.questions = buildQuestions(pool, pool.length, state.direction);
+  state.currentQ = 0;
+  state.score = 0;
+  state.wrongList = [];
+  state.mode = "quiz";
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
